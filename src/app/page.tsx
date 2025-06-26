@@ -25,39 +25,39 @@ import {
 const services = [
   {
     icon: <Brain className="w-8 h-8" />,
-    title: 'SEO Technique IA',
-    description: 'Audit automatisé et optimisations prédictives powered by AI',
-    features: ['Analyse technique 360°', 'Optimisations prédictives', 'Monitoring automatisé'],
+    title: 'Make Your Site Faster',
+    description: 'We check your site and fix slow loading problems',
+    features: ['Fix slow pages', 'Make Google happy', 'Check every week'],
     color: 'from-primary-orange to-gradient-end'
   },
   {
     icon: <Target className="w-8 h-8" />,
-    title: 'SEO Local (GEO)',
-    description: 'Domination locale Luxembourg + Grande Région',
-    features: ['Google My Business', 'Citations locales', 'Avis clients optimisés'],
+    title: 'Get Found Locally',
+    description: 'Help people in Luxembourg find your business online',
+    features: ['Show up on Google Maps', 'Get more local customers', 'Improve your reviews'],
     color: 'from-accent-blue to-blue-400'
   },
   {
     icon: <Sparkles className="w-8 h-8" />,
-    title: 'AEO (Answer Engine)',
-    description: 'Optimisation Alexa, Siri, Google Assistant',
-    features: ['Featured snippets', 'Voice search ready', 'FAQ optimisées'],
+    title: 'Voice Search Ready',
+    description: 'When people ask Siri or Google, they find you first',
+    features: ['Answer common questions', 'Show up in voice searches', 'Help people find info fast'],
     color: 'from-accent-green to-green-400'
   },
   {
     icon: <Globe className="w-8 h-8" />,
-    title: 'SEO International',
-    description: 'Expansion multilingue avec IA',
-    features: ['Hreflang setup', 'Contenu multilingue', 'Stratégie globale'],
+    title: 'Reach More Countries',
+    description: 'Help your site work in French, German, and English',
+    features: ['Translate your content', 'Reach more customers', 'Work across borders'],
     color: 'from-purple-500 to-pink-500'
   }
 ];
 
 const stats = [
-  { value: '98%', label: 'Score Lighthouse Moyen', icon: <Zap className="w-6 h-6" /> },
-  { value: '20+', label: 'Leads Qualifiés/Mois', icon: <Users className="w-6 h-6" /> },
-  { value: '#1', label: 'Position "SEO Luxembourg"', icon: <Award className="w-6 h-6" /> },
-  { value: '150%', label: 'Croissance Trafic Moyen', icon: <TrendingUp className="w-6 h-6" /> }
+  { value: '98%', label: 'Site Speed Score', icon: <Zap className="w-6 h-6" /> },
+  { value: '20+', label: 'New Customers Per Month', icon: <Users className="w-6 h-6" /> },
+  { value: '#1', label: 'Top Spot on Google', icon: <Award className="w-6 h-6" /> },
+  { value: '150%', label: 'More Website Visitors', icon: <TrendingUp className="w-6 h-6" /> }
 ];
 
 const technologies = [
@@ -86,30 +86,30 @@ export default function HomePage() {
                 <div className="inline-flex items-center space-x-2 bg-primary-orange/10 border border-primary-orange/20 rounded-full px-4 py-2">
                   <Sparkles className="w-4 h-4 text-primary-orange" />
                   <span className="text-sm text-primary-orange font-medium">
-                    #1 Agence SEO IA Luxembourg
+                    #1 Website Helper in Luxembourg
                   </span>
                 </div>
                 
                 <h1 className="h1 text-white leading-tight">
-                  Dominez Google avec le{' '}
+                  Your Website Can Get{' '}
                   <span className="text-gradient">
-                    Référencement IA
+                    More Customers
                   </span>
                 </h1>
                 
                 <p className="text-xl text-text-secondary max-w-lg leading-relaxed">
-                  Première agence Luxembourg spécialisée en SEO/GEO/AEO assisté par IA. 
-                  Résultats mesurables, transparence totale, expertise technique démontrée.
+                  We help businesses in Luxembourg get found on Google. 
+                  Your website already exists. Let us make it work better for you.
                 </p>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button size="lg" className="group">
-                  Audit Gratuit
+                  Check My Website Free
                   <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
                 <Button variant="outline" size="lg">
-                  Voir Nos Résultats
+                  See What We Did
                 </Button>
               </div>
 
@@ -145,13 +145,13 @@ export default function HomePage() {
         <div className="container-wide mx-auto">
           <div className="text-center mb-16">
             <h2 className="h2 text-white mb-6">
-              Services{' '}
-              <span className="text-gradient">SEO/GEO/AEO</span>{' '}
-              Powered by IA
+              How We Can{' '}
+              <span className="text-gradient">Help Your Website</span>{' '}
+              Get More Business
             </h2>
             <p className="text-xl text-text-secondary max-w-3xl mx-auto">
-              Notre stack IA propriétaire révolutionne le référencement. 
-              Découvrez comment nous transformons votre visibilité digitale au Luxembourg.
+              Your website might look nice. But can people find it? 
+              We make small changes that bring big results.
             </p>
           </div>
 
@@ -183,7 +183,7 @@ export default function HomePage() {
 
           <div className="text-center">
             <Button size="lg" variant="outline">
-              Découvrir Tous Nos Services
+              Learn More About What We Do
               <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
           </div>
@@ -195,12 +195,12 @@ export default function HomePage() {
         <div className="container-wide mx-auto">
           <div className="text-center mb-16">
             <h2 className="h2 text-white mb-6">
-              Proof of Concept:{' '}
-              <span className="text-gradient">Notre Expertise en Action</span>
+              This Website Is{' '}
+              <span className="text-gradient">Our Example</span>
             </h2>
             <p className="text-xl text-text-secondary max-w-3xl mx-auto">
-              Ce site même démontre notre maîtrise technique. Performance parfaite, 
-              SEO optimisé, et outils IA intégrés.
+              We built this site to show you what good work looks like. 
+              It loads fast, shows up on Google, and brings us customers.
             </p>
           </div>
 
@@ -228,7 +228,7 @@ export default function HomePage() {
 
               <Card variant="gradient" padding="lg">
                 <CardContent>
-                  <h3 className="h4 text-white mb-4">Stack Technologique</h3>
+                  <h3 className="h4 text-white mb-4">Tools We Use</h3>
                   <div className="flex flex-wrap gap-2">
                     {technologies.map((tech, index) => (
                       <span
@@ -259,33 +259,33 @@ export default function HomePage() {
         <div className="container-narrow mx-auto text-center">
           <div className="space-y-8">
             <h2 className="h2 text-white">
-              Prêt à Dominer Google au{' '}
-              <span className="text-gradient">Luxembourg</span> ?
+              Ready to Get More{' '}
+              <span className="text-gradient">Customers</span> ?
             </h2>
             
             <p className="text-xl text-text-secondary">
-              Rejoignez les PME luxembourgeoises qui font confiance à notre expertise IA 
-              pour transformer leur visibilité digitale.
+              Many businesses in Luxembourg trust us to help their websites work better. 
+              Your turn to see what we can do for you.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="xl" className="group">
-                Commencer
+                Start Now
                 <Zap className="ml-2 w-5 h-5 group-hover:scale-110 transition-transform" />
               </Button>
               <Button size="xl" variant="outline">
-                Consultation
+                Talk to Us
               </Button>
             </div>
 
             <div className="flex items-center justify-center space-x-8 pt-8 text-text-secondary">
               <div className="flex items-center space-x-2">
                 <CheckCircle className="w-5 h-5 text-accent-green" />
-                <span>Audit gratuit sans engagement</span>
+                <span>Free check, no strings attached</span>
               </div>
               <div className="flex items-center space-x-2">
                 <CheckCircle className="w-5 h-5 text-accent-green" />
-                <span>Résultats garantis sous 6 mois</span>
+                <span>See results in 6 months or less</span>
               </div>
             </div>
           </div>
