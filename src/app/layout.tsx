@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     default: 'SEO4Life - Référencement IA Luxembourg | Agence SEO Expert',
     template: '%s | SEO4Life Luxembourg',
   },
-  description: 'Agence SEO Luxembourg spécialisée en référencement naturel assisté par IA. Expertise SEO/GEO/AEO pour PME luxembourgeoises. Audit gratuit et résultats garantis.',
+  description: 'Agence SEO Luxembourg spécialisée en référencement naturel assisté par IA. Optimisation pour AI Overviews Google, featured snippets et recherche vocale. Expertise SEO/GEO/AEO pour PME luxembourgeoises. Audit gratuit et résultats garantis.',
   keywords: [
     'SEO Luxembourg',
     'référencement naturel Luxembourg',
@@ -36,7 +36,11 @@ export const metadata: Metadata = {
     'AEO optimisation Luxembourg',
     'référencement local Luxembourg',
     'audit SEO gratuit Luxembourg',
-    'consultant SEO fintech Luxembourg'
+    'consultant SEO fintech Luxembourg',
+    'AI Overviews optimisation Luxembourg',
+    'featured snippets SEO Luxembourg',
+    'recherche vocale SEO Luxembourg',
+    'AEO Answer Engine Optimization'
   ],
   authors: [{ name: 'SEO4Life' }],
   creator: 'SEO4Life',

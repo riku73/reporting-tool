@@ -60,6 +60,12 @@ export default function AuditTool() {
           score: 100,
           status: 'excellent',
           description: 'HTTPS activé, headers de sécurité configurés'
+        },
+        {
+          category: 'AI Overviews',
+          score: 34,
+          status: 'warning',
+          description: 'Contenu non optimisé pour AI Overviews Google'
         }
       ];
 
@@ -150,6 +156,10 @@ export default function AuditTool() {
                   <div className="w-2 h-2 bg-accent-green rounded-full animate-pulse animation-delay-600"></div>
                   <span>Analyse concurrentielle IA</span>
                 </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-accent-green rounded-full animate-pulse animation-delay-800"></div>
+                  <span>Vérification compatibilité AI Overviews</span>
+                </div>
               </div>
             </div>
           )}
@@ -230,6 +240,14 @@ export default function AuditTool() {
               <div className="flex items-center space-x-2 text-text-secondary">
                 <CheckCircle className="w-4 h-4 text-accent-green" />
                 <span>Recommandations IA</span>
+              </div>
+              <div className="flex items-center space-x-2 text-text-secondary">
+                <CheckCircle className="w-4 h-4 text-accent-green" />
+                <span>Analyse AI Overviews</span>
+              </div>
+              <div className="flex items-center space-x-2 text-text-secondary">
+                <CheckCircle className="w-4 h-4 text-accent-green" />
+                <span>Optimisation AEO</span>
               </div>
             </div>
           )}
