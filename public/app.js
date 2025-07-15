@@ -50,8 +50,13 @@ function displayFileList(files) {
         const item = document.createElement('div');
         item.className = 'file-item';
         item.innerHTML = `
-            <span>${index + 1}. ${file.name} (${(file.size / 1024).toFixed(2)} KB)</span>
-            <button class="file-remove-btn" onclick="removeFile(${index})">×</button>
+            <div class="file-item-content">
+                <div class="file-item-info">
+                    <span>${index + 1}. ${file.name}</span>
+                    <span>${(file.size / 1024).toFixed(2)} KB</span>
+                </div>
+                <button class="file-remove-btn" onclick="removeFile(${index})" title="Remove file">×</button>
+            </div>
         `;
         fileList.appendChild(item);
     });
@@ -60,8 +65,8 @@ function displayFileList(files) {
     if (files.length > 1) {
         const clearBtn = document.createElement('button');
         clearBtn.textContent = 'Clear All';
+        clearBtn.className = 'clear-all-btn';
         clearBtn.onclick = clearAllFiles;
-        clearBtn.style.cssText = 'background: #95a5a6; color: white; border: none; padding: 8px 16px; border-radius: 4px; margin-top: 10px; cursor: pointer;';
         fileList.appendChild(clearBtn);
     }
 }
@@ -101,10 +106,8 @@ processBtn.addEventListener('click', async () => {
         populateFilters();
         showDataSection();
         displayDataTable();
+        updateAllCharts();
         showSuccess(`Successfully processed ${selectedFiles.length} file(s) with ${salesData.length} records.`);
-        
-        // Test European formatting
-        console.log('European formatting test:', formatEuropean(1234.56, 2));
         
     } catch (error) {
         console.error('Processing error:', error);
@@ -177,13 +180,14 @@ function readCSVFile(file) {
                     return result;
                 });
                 
+                console.log('CSV data parsed, rows:', data.length);
                 resolve(data);
             } catch (error) {
                 reject(error);
             }
         };
         
-        reader.onerror = () => reject(new Error('Failed to read CSV file'));
+        reader.onerror = () => reject(new Error('Failed to read file'));
         reader.readAsText(file);
     });
 }
@@ -195,13 +199,13 @@ function readExcelFile(file) {
         
         reader.onload = (e) => {
             try {
-                const arrayBuffer = e.target.result;
-                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-                const sheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[sheetName];
-                const data = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
                 
-                resolve(data);
+                console.log('Excel data parsed, rows:', jsonData.length);
+                resolve(jsonData);
             } catch (error) {
                 reject(error);
             }
@@ -229,8 +233,11 @@ function extractCompanyName(filename) {
     
     for (const pattern of patterns) {
         const match = filename.match(pattern);
-        if (match) {
-            return match[1].trim().replace(/[_-]/g, ' ');
+        if (match && match[1]) {
+            const name = match[1].trim();
+            if (name.length > 1 && name.length < 20) {
+                return name;
+            }
         }
     }
     
@@ -241,7 +248,6 @@ function extractCompanyName(filename) {
 function processEASSCData(rawData, filename) {
     console.log('Processing EASSC data for:', filename);
     console.log('Raw data rows:', rawData.length);
-    console.log('First few rows:', rawData.slice(0, 5));
     
     if (!rawData || rawData.length < 2) {
         console.log('Not enough data in file');
@@ -263,7 +269,6 @@ function processEASSCData(rawData, filename) {
         
         // Check if this row contains a year (like "2023", "2024", "2025")
         const yearMatch = row.find(cell => String(cell).match(/^(20\d{2})$/));
-        console.log('Checking row', i, ':', row.slice(0, 5), 'Year match:', yearMatch);
         if (yearMatch) {
             const year = parseInt(yearMatch);
             console.log('Found year section:', year, 'at row', i);
@@ -306,9 +311,7 @@ function processEASSCData(rawData, filename) {
                 if (!dataRow || dataRow.length === 0) continue;
                 
                 const productName = String(dataRow[1] || '').trim();
-                console.log('Processing product row:', dataRow.slice(0, 5), 'Product name:', productName);
                 if (!productName || productName === '' || productName.toLowerCase().includes('total')) {
-                    console.log('Skipping row - invalid product name');
                     continue;
                 }
                 
@@ -363,7 +366,6 @@ function transformEASSCToSalesData(easscData) {
     });
     
     console.log('Transformed data:', transformedData.length, 'records');
-    console.log('Sample transformed data:', transformedData.slice(0, 3));
     return transformedData;
 }
 
@@ -390,76 +392,52 @@ function populateFilters() {
         option.textContent = product;
         categoryFilter.appendChild(option);
     });
+    
+    // Add event listeners for filters
+    [categoryFilter, dataTypeFilter, companyFilter].forEach(filter => {
+        filter.addEventListener('change', () => {
+            displayDataTable();
+            updateAllCharts();
+        });
+    });
 }
 
 // Show data section
 function showDataSection() {
     dataSection.style.display = 'block';
+    
+    // Initialize tab functionality
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const tabName = tab.dataset.tab;
+            switchTab(tabName);
+        });
+    });
 }
 
-// Tab switching functionality
-tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-        const targetTab = tab.dataset.tab;
-        
-        // Update active tab
-        tabs.forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        
-        // Update active content
-        tabContents.forEach(content => {
-            content.classList.remove('active');
-            if (content.id === `${targetTab}TabContent`) {
-                content.classList.add('active');
-            }
-        });
-        
-        // Load content based on tab
-        switch (targetTab) {
-            case 'table':
-                displayDataTable();
-                break;
-            case 'evolution':
-                displayEvolutionCharts();
-                break;
-            case 'categories':
-                displayCategoryAnalysis();
-                break;
-            case 'trends':
-                displayTrendAnalysis();
-                break;
-        }
-    });
-});
-
-// Filter change handlers
-categoryFilter.addEventListener('change', () => {
-    updateDisplays();
-});
-
-dataTypeFilter.addEventListener('change', () => {
-    updateDisplays();
-});
-
-companyFilter.addEventListener('change', () => {
-    updateDisplays();
-});
-
-function updateDisplays() {
-    const activeTab = document.querySelector('.tab.active').dataset.tab;
+// Switch between tabs
+function switchTab(tabName) {
+    // Remove active class from all tabs and contents
+    tabs.forEach(t => t.classList.remove('active'));
+    tabContents.forEach(tc => tc.classList.remove('active'));
     
-    switch (activeTab) {
+    // Add active class to selected tab and content
+    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+    document.getElementById(`${tabName}TabContent`).classList.add('active');
+    
+    // Update content based on tab
+    switch(tabName) {
         case 'table':
             displayDataTable();
             break;
         case 'evolution':
-            displayEvolutionCharts();
+            updateEvolutionCharts();
             break;
         case 'categories':
-            displayCategoryAnalysis();
+            updateCategoryChart();
             break;
         case 'trends':
-            displayTrendAnalysis();
+            updateTrendAnalysis();
             break;
     }
 }
@@ -483,13 +461,7 @@ function displayDataTable() {
     const filteredData = getFilteredData();
     const selectedDataType = dataTypeFilter.value;
     
-    console.log('displayDataTable called');
-    console.log('Total salesData:', salesData.length);
-    console.log('Filtered data:', filteredData.length);
-    console.log('Selected data type:', selectedDataType);
-    
     if (filteredData.length === 0) {
-        console.log('No filtered data available');
         document.getElementById('dataTableContainer').innerHTML = '<p>No data available for the selected filters.</p>';
         return;
     }
@@ -509,127 +481,179 @@ function displayDataTable() {
         allMonths.add(monthKey);
         allYears.add(d.year);
         
-        const value = selectedDataType === 'sales' ? d.sales : d.stocks;
-        groupedData.get(key).set(monthKey, value);
+        groupedData.get(key).set(monthKey, d.value);
     });
     
+    // Sort months chronologically
     const sortedMonths = Array.from(allMonths).sort();
-    const products = Array.from(groupedData.keys()).sort();
+    const sortedYears = Array.from(allYears).sort();
     
     // Create table
-    let html = '<div class="analytics-section">';
-    html += '<h4>Monthly Data Overview</h4>';
-    html += '<div class="table-container">';
+    let html = '<div class="table-container">';
     html += '<table class="data-table">';
     
-    // Headers
+    // Header
     html += '<thead><tr>';
     html += '<th>Product</th>';
     sortedMonths.forEach(month => {
         const [year, monthNum] = month.split('-');
-        const monthName = new Date(year, parseInt(monthNum) - 1, 1).toLocaleDateString('en-US', { month: 'short' });
+        const monthName = new Date(year, parseInt(monthNum) - 1).toLocaleString('default', { month: 'short' });
         html += `<th>${monthName} ${year}</th>`;
     });
+    html += '<th>Total</th>';
     html += '<th>Average</th>';
     html += '</tr></thead>';
     
-    // Data rows
+    // Body
     html += '<tbody>';
-    products.forEach(product => {
+    groupedData.forEach((monthData, product) => {
         html += '<tr>';
-        html += `<td>${product}</td>`;
+        html += `<td><strong>${product}</strong></td>`;
         
-        const productData = groupedData.get(product);
         let total = 0;
         let count = 0;
         
         sortedMonths.forEach(month => {
-            const value = productData.get(month) || 0;
+            const value = monthData.get(month) || 0;
             if (value > 0) {
                 total += value;
                 count++;
             }
-            html += `<td>${formatEuropean(value, 0)}</td>`;
+            html += `<td>${value > 0 ? formatEuropean(value) : '-'}</td>`;
         });
         
         const average = count > 0 ? total / count : 0;
-        html += `<td><strong>${formatEuropean(average, 0)}</strong></td>`;
+        html += `<td><strong>${formatEuropean(total)}</strong></td>`;
+        html += `<td>${average > 0 ? formatEuropean(average) : '-'}</td>`;
         html += '</tr>';
     });
+    
+    // Add totals row
+    html += '<tr style="border-top: 2px solid #ddd; background-color: #f8f9fa;">';
+    html += '<td><strong>TOTAL</strong></td>';
+    
+    const periodTotals = [];
+    sortedMonths.forEach(month => {
+        let monthTotal = 0;
+        groupedData.forEach(monthData => {
+            monthTotal += monthData.get(month) || 0;
+        });
+        periodTotals.push(monthTotal);
+    });
+    
+    periodTotals.forEach(total => {
+        html += `<td><strong>${total > 0 ? formatEuropean(total) : '-'}</strong></td>`;
+    });
+    
+    const grandTotal = periodTotals.reduce((sum, val) => sum + val, 0);
+    const grandAverage = periodTotals.length > 0 ? grandTotal / periodTotals.filter(v => v > 0).length : 0;
+    
+    html += `<td><strong>${formatEuropean(grandTotal)}</strong></td>`;
+    html += `<td><strong>${grandAverage > 0 ? formatEuropean(grandAverage) : '-'}</strong></td>`;
+    html += '</tr>';
+    
     html += '</tbody></table>';
-    html += '</div></div>';
+    html += '</div>';
+    
+    // Add summary stats
+    html = `
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total ${selectedDataType}</div>
+                <div class="stat-value">${formatEuropean(grandTotal)}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Records</div>
+                <div class="stat-value">${filteredData.length}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Products</div>
+                <div class="stat-value">${groupedData.size}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Period Average</div>
+                <div class="stat-value">${formatEuropean(grandAverage)}</div>
+            </div>
+        </div>
+    ` + html;
     
     document.getElementById('dataTableContainer').innerHTML = html;
 }
 
-// Display evolution charts (5 chart types)
-function displayEvolutionCharts() {
-    createAnnualChart();
-    createEvolutionChart();
-    createMarketShareChart();
-    createGrowthRateChart();
-    createSeasonalChart();
+// Update all charts
+function updateAllCharts() {
+    updateEvolutionCharts();
+    updateCategoryChart();
+    updateTrendAnalysis();
 }
 
-// 1. Annual Chart (Bar Chart)
-function createAnnualChart() {
+// Update evolution charts
+function updateEvolutionCharts() {
+    updateAnnualChart();
+    updateMonthlyChart();
+    updateMarketShareChart();
+    updateGrowthRateChart();
+    updateSeasonalChart();
+}
+
+// Update annual chart
+function updateAnnualChart() {
     const filteredData = getFilteredData();
-    const selectedDataType = dataTypeFilter.value;
+    if (filteredData.length === 0) return;
     
-    // Group by product and year
-    const annualData = new Map();
-    const years = new Set();
+    // Destroy existing chart
+    if (charts.annual) {
+        charts.annual.destroy();
+    }
     
+    // Group data by product and year
+    const productYearData = {};
     filteredData.forEach(d => {
-        const key = d.product;
-        if (!annualData.has(key)) {
-            annualData.set(key, new Map());
+        if (!productYearData[d.product]) {
+            productYearData[d.product] = {};
         }
-        
-        years.add(d.year);
-        const currentValue = annualData.get(key).get(d.year) || 0;
-        const value = selectedDataType === 'sales' ? d.sales : d.stocks;
-        annualData.get(key).set(d.year, currentValue + value);
+        if (!productYearData[d.product][d.year]) {
+            productYearData[d.product][d.year] = 0;
+        }
+        productYearData[d.product][d.year] += d.value;
     });
     
-    const sortedYears = Array.from(years).sort();
-    const products = Array.from(annualData.keys()).sort();
+    const years = [...new Set(filteredData.map(d => d.year))].sort();
+    const products = Object.keys(productYearData);
     
-    // Prepare chart data
-    const datasets = sortedYears.map((year, index) => ({
-        label: year.toString(),
-        data: products.map(product => annualData.get(product).get(year) || 0),
-        backgroundColor: `hsl(${index * 120}, 70%, 60%)`,
-        borderColor: `hsl(${index * 120}, 70%, 50%)`,
+    const datasets = products.map((product, index) => ({
+        label: product,
+        data: years.map(year => productYearData[product][year] || 0),
+        backgroundColor: `hsla(${(index * 60) % 360}, 70%, 60%, 0.8)`,
+        borderColor: `hsla(${(index * 60) % 360}, 70%, 50%, 1)`,
         borderWidth: 1
     }));
     
-    destroyChart('annualChart');
     const ctx = document.getElementById('annualChart').getContext('2d');
-    charts.annualChart = new Chart(ctx, {
+    charts.annual = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: products,
+            labels: years,
             datasets: datasets
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                title: {
-                    display: true,
-                    text: `Annual ${selectedDataType.charAt(0).toUpperCase() + selectedDataType.slice(1)} Comparison`
-                },
-                legend: {
-                    display: true
-                }
-            },
             scales: {
                 y: {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            return formatEuropean(value, 0);
+                            return formatEuropean(value);
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + formatEuropean(context.parsed.y);
                         }
                     }
                 }
@@ -638,67 +662,69 @@ function createAnnualChart() {
     });
 }
 
-// 2. Evolution Chart (Line Chart)
-function createEvolutionChart() {
+// Update monthly evolution chart
+function updateMonthlyChart() {
     const filteredData = getFilteredData();
-    const selectedDataType = dataTypeFilter.value;
+    if (filteredData.length === 0) return;
     
-    // Group by product and month
-    const evolutionData = new Map();
-    const allMonths = new Set();
+    // Destroy existing chart
+    if (charts.evolution) {
+        charts.evolution.destroy();
+    }
+    
+    // Group data by product and month/year
+    const productMonthData = {};
+    const allDates = new Set();
     
     filteredData.forEach(d => {
-        const key = d.product;
-        if (!evolutionData.has(key)) {
-            evolutionData.set(key, new Map());
+        if (!productMonthData[d.product]) {
+            productMonthData[d.product] = {};
         }
         
-        const monthKey = `${d.year}-${String(d.month).padStart(2, '0')}`;
-        allMonths.add(monthKey);
-        
-        const value = selectedDataType === 'sales' ? d.sales : d.stocks;
-        evolutionData.get(key).set(monthKey, value);
+        const dateKey = `${d.year}-${String(d.month).padStart(2, '0')}`;
+        allDates.add(dateKey);
+        productMonthData[d.product][dateKey] = d.value;
     });
     
-    const sortedMonths = Array.from(allMonths).sort();
-    const products = Array.from(evolutionData.keys()).sort().slice(0, 5); // Limit to 5 products for readability
+    const sortedDates = Array.from(allDates).sort();
+    const products = Object.keys(productMonthData);
     
     const datasets = products.map((product, index) => ({
         label: product,
-        data: sortedMonths.map(month => evolutionData.get(product).get(month) || 0),
-        borderColor: `hsl(${index * 60}, 70%, 50%)`,
-        backgroundColor: `hsla(${index * 60}, 70%, 50%, 0.1)`,
-        borderWidth: 2,
-        fill: false
+        data: sortedDates.map(date => productMonthData[product][date] || 0),
+        borderColor: `hsla(${(index * 60) % 360}, 70%, 50%, 1)`,
+        backgroundColor: `hsla(${(index * 60) % 360}, 70%, 60%, 0.1)`,
+        tension: 0.4
     }));
     
-    destroyChart('evolutionChart');
     const ctx = document.getElementById('evolutionChart').getContext('2d');
-    charts.evolutionChart = new Chart(ctx, {
+    charts.evolution = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: sortedMonths.map(month => {
-                const [year, monthNum] = month.split('-');
-                const date = new Date(year, parseInt(monthNum) - 1, 1);
-                return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+            labels: sortedDates.map(date => {
+                const [year, month] = date.split('-');
+                return new Date(year, parseInt(month) - 1).toLocaleString('default', { month: 'short' }) + ' ' + year;
             }),
             datasets: datasets
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                title: {
-                    display: true,
-                    text: `${selectedDataType.charAt(0).toUpperCase() + selectedDataType.slice(1)} Evolution Over Time`
-                }
-            },
             scales: {
                 y: {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            return formatEuropean(value, 0);
+                            return formatEuropean(value);
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + formatEuropean(context.parsed.y);
                         }
                     }
                 }
@@ -707,55 +733,51 @@ function createEvolutionChart() {
     });
 }
 
-// 3. Market Share Chart (Pie Chart)
-function createMarketShareChart() {
+// Update market share chart
+function updateMarketShareChart() {
     const filteredData = getFilteredData();
-    const selectedDataType = dataTypeFilter.value;
+    if (filteredData.length === 0) return;
+    
+    // Destroy existing chart
+    if (charts.marketShare) {
+        charts.marketShare.destroy();
+    }
     
     // Calculate total by product
-    const productTotals = new Map();
-    
+    const productTotals = {};
     filteredData.forEach(d => {
-        const key = d.product;
-        const currentTotal = productTotals.get(key) || 0;
-        const value = selectedDataType === 'sales' ? d.sales : d.stocks;
-        productTotals.set(key, currentTotal + value);
+        if (!productTotals[d.product]) {
+            productTotals[d.product] = 0;
+        }
+        productTotals[d.product] += d.value;
     });
     
-    const products = Array.from(productTotals.keys()).sort();
-    const values = products.map(product => productTotals.get(product));
+    const products = Object.keys(productTotals);
+    const values = Object.values(productTotals);
+    const colors = products.map((_, index) => `hsla(${(index * 60) % 360}, 70%, 60%, 0.8)`);
     
-    destroyChart('marketShareChart');
     const ctx = document.getElementById('marketShareChart').getContext('2d');
-    charts.marketShareChart = new Chart(ctx, {
+    charts.marketShare = new Chart(ctx, {
         type: 'pie',
         data: {
             labels: products,
             datasets: [{
                 data: values,
-                backgroundColor: products.map((_, index) => `hsl(${index * 360 / products.length}, 70%, 60%)`),
-                borderColor: '#fff',
-                borderWidth: 2
+                backgroundColor: colors,
+                borderColor: colors.map(color => color.replace('0.8', '1')),
+                borderWidth: 1
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                title: {
-                    display: true,
-                    text: `Market Share by Product (${selectedDataType.charAt(0).toUpperCase() + selectedDataType.slice(1)})`
-                },
-                legend: {
-                    position: 'right'
-                },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            const value = context.parsed;
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = ((value / total) * 100).toFixed(1);
-                            return `${context.label}: ${formatEuropean(value, 0)} (${percentage}%)`;
+                            const total = values.reduce((sum, val) => sum + val, 0);
+                            const percentage = ((context.parsed / total) * 100).toFixed(1);
+                            return context.label + ': ' + formatEuropean(context.parsed) + ' (' + percentage + '%)';
                         }
                     }
                 }
@@ -764,51 +786,61 @@ function createMarketShareChart() {
     });
 }
 
-// 4. Growth Rate Chart (Horizontal Bar Chart)
-function createGrowthRateChart() {
+// Update growth rate chart
+function updateGrowthRateChart() {
     const filteredData = getFilteredData();
-    const selectedDataType = dataTypeFilter.value;
+    if (filteredData.length === 0) return;
     
-    // Calculate yearly totals by product
-    const yearlyTotals = new Map();
-    const years = new Set();
+    // Destroy existing chart
+    if (charts.growthRate) {
+        charts.growthRate.destroy();
+    }
     
+    // Calculate year-over-year growth
+    const productYearData = {};
     filteredData.forEach(d => {
-        const key = d.product;
-        if (!yearlyTotals.has(key)) {
-            yearlyTotals.set(key, new Map());
+        if (!productYearData[d.product]) {
+            productYearData[d.product] = {};
         }
-        
-        years.add(d.year);
-        const currentValue = yearlyTotals.get(key).get(d.year) || 0;
-        const value = selectedDataType === 'sales' ? d.sales : d.stocks;
-        yearlyTotals.get(key).set(d.year, currentValue + value);
+        if (!productYearData[d.product][d.year]) {
+            productYearData[d.product][d.year] = 0;
+        }
+        productYearData[d.product][d.year] += d.value;
     });
     
-    const sortedYears = Array.from(years).sort();
-    if (sortedYears.length < 2) return;
+    const products = Object.keys(productYearData);
+    const years = [...new Set(filteredData.map(d => d.year))].sort();
     
-    const products = Array.from(yearlyTotals.keys()).sort();
-    const growthRates = products.map(product => {
-        const productData = yearlyTotals.get(product);
-        const firstYear = productData.get(sortedYears[0]) || 0;
-        const lastYear = productData.get(sortedYears[sortedYears.length - 1]) || 0;
-        
-        if (firstYear === 0) return 0;
-        return ((lastYear - firstYear) / firstYear) * 100;
+    const growthData = [];
+    products.forEach(product => {
+        if (years.length >= 2) {
+            const oldYear = years[0];
+            const newYear = years[years.length - 1];
+            const oldValue = productYearData[product][oldYear] || 0;
+            const newValue = productYearData[product][newYear] || 0;
+            
+            if (oldValue > 0) {
+                const growth = ((newValue - oldValue) / oldValue) * 100;
+                growthData.push({
+                    product: product,
+                    growth: growth
+                });
+            }
+        }
     });
     
-    destroyChart('growthRateChart');
+    growthData.sort((a, b) => b.growth - a.growth);
+    
     const ctx = document.getElementById('growthRateChart').getContext('2d');
-    charts.growthRateChart = new Chart(ctx, {
+    charts.growthRate = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: products,
+            labels: growthData.map(d => d.product),
             datasets: [{
-                label: `Growth Rate (${sortedYears[0]}-${sortedYears[sortedYears.length - 1]})`,
-                data: growthRates,
-                backgroundColor: growthRates.map(rate => rate >= 0 ? '#27ae60' : '#e74c3c'),
-                borderColor: growthRates.map(rate => rate >= 0 ? '#219a52' : '#c0392b'),
+                label: 'Growth Rate (%)',
+                data: growthData.map(d => d.growth),
+                backgroundColor: growthData.map(d => d.growth >= 0 ? 'hsla(120, 70%, 60%, 0.8)' : 'hsla(0, 70%, 60%, 0.8)'),
+                borderColor: growthData.map(d => d.growth >= 0 ? 'hsla(120, 70%, 50%, 1)' : 'hsla(0, 70%, 50%, 1)'),
                 borderWidth: 1
             }]
         },
@@ -816,17 +848,21 @@ function createGrowthRateChart() {
             indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                title: {
-                    display: true,
-                    text: `Growth Rate Analysis (${sortedYears[0]}-${sortedYears[sortedYears.length - 1]})`
-                }
-            },
             scales: {
                 x: {
+                    beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            return value.toFixed(1) + '%';
+                            return value + '%';
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'Growth: ' + context.parsed.x.toFixed(1) + '%';
                         }
                     }
                 }
@@ -835,66 +871,64 @@ function createGrowthRateChart() {
     });
 }
 
-// 5. Seasonal Chart (Bar Chart)
-function createSeasonalChart() {
+// Update seasonal chart
+function updateSeasonalChart() {
     const filteredData = getFilteredData();
-    const selectedDataType = dataTypeFilter.value;
+    if (filteredData.length === 0) return;
     
-    // Calculate monthly averages across all years
-    const monthlyData = new Map();
-    const monthCounts = new Map();
+    // Destroy existing chart
+    if (charts.seasonal) {
+        charts.seasonal.destroy();
+    }
     
-    for (let month = 1; month <= 12; month++) {
-        monthlyData.set(month, 0);
-        monthCounts.set(month, 0);
+    // Calculate averages by month across all years
+    const monthlyData = {};
+    for (let i = 1; i <= 12; i++) {
+        monthlyData[i] = { total: 0, count: 0 };
     }
     
     filteredData.forEach(d => {
-        const value = selectedDataType === 'sales' ? d.sales : d.stocks;
-        if (value > 0) {
-            monthlyData.set(d.month, monthlyData.get(d.month) + value);
-            monthCounts.set(d.month, monthCounts.get(d.month) + 1);
-        }
+        monthlyData[d.month].total += d.value;
+        monthlyData[d.month].count++;
     });
     
-    const monthlyAverages = [];
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const averages = months.map((_, index) => {
+        const monthNum = index + 1;
+        return monthlyData[monthNum].count > 0 ? monthlyData[monthNum].total / monthlyData[monthNum].count : 0;
+    });
     
-    for (let month = 1; month <= 12; month++) {
-        const count = monthCounts.get(month);
-        const average = count > 0 ? monthlyData.get(month) / count : 0;
-        monthlyAverages.push(average);
-    }
-    
-    destroyChart('seasonalChart');
     const ctx = document.getElementById('seasonalChart').getContext('2d');
-    charts.seasonalChart = new Chart(ctx, {
+    charts.seasonal = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: monthNames,
+            labels: months,
             datasets: [{
-                label: `Average Monthly ${selectedDataType.charAt(0).toUpperCase() + selectedDataType.slice(1)}`,
-                data: monthlyAverages,
-                backgroundColor: '#3498db',
-                borderColor: '#2980b9',
+                label: 'Monthly Average',
+                data: averages,
+                backgroundColor: 'hsla(200, 70%, 60%, 0.8)',
+                borderColor: 'hsla(200, 70%, 50%, 1)',
                 borderWidth: 1
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                title: {
-                    display: true,
-                    text: `Seasonal Pattern Analysis (Monthly Averages)`
-                }
-            },
             scales: {
                 y: {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            return formatEuropean(value, 0);
+                            return formatEuropean(value);
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'Average: ' + formatEuropean(context.parsed.y);
                         }
                     }
                 }
@@ -903,84 +937,63 @@ function createSeasonalChart() {
     });
 }
 
-// Category analysis
-function displayCategoryAnalysis() {
+// Update category chart
+function updateCategoryChart() {
     const filteredData = getFilteredData();
-    const selectedDataType = dataTypeFilter.value;
+    if (filteredData.length === 0) return;
     
-    // Calculate stats by category
-    const categoryStats = new Map();
+    // Destroy existing chart
+    if (charts.category) {
+        charts.category.destroy();
+    }
     
+    // Calculate totals by category
+    const categoryTotals = {};
     filteredData.forEach(d => {
-        const key = d.product;
-        if (!categoryStats.has(key)) {
-            categoryStats.set(key, { total: 0, count: 0, values: [] });
+        if (!categoryTotals[d.product]) {
+            categoryTotals[d.product] = 0;
         }
-        
-        const value = selectedDataType === 'sales' ? d.sales : d.stocks;
-        const stats = categoryStats.get(key);
-        stats.total += value;
-        stats.count += 1;
-        stats.values.push(value);
+        categoryTotals[d.product] += d.value;
     });
     
-    // Create summary table
-    let html = '<div class="stats-grid">';
-    Array.from(categoryStats.entries()).sort((a, b) => b[1].total - a[1].total).forEach(([category, stats]) => {
-        const average = stats.total / stats.count;
-        const max = Math.max(...stats.values);
-        const min = Math.min(...stats.values.filter(v => v > 0));
-        
-        html += `
-            <div class="stat-card">
-                <div class="stat-label">${category}</div>
-                <div class="stat-value">${formatEuropean(stats.total, 0)}</div>
-                <div class="stat-label">Total ${selectedDataType}</div>
-                <div style="margin-top: 10px; font-size: 14px; color: #666;">
-                    Avg: ${formatEuropean(average, 0)}<br>
-                    Max: ${formatEuropean(max, 0)}<br>
-                    Min: ${formatEuropean(min, 0)}
-                </div>
-            </div>
-        `;
-    });
-    html += '</div>';
+    const sortedData = Object.entries(categoryTotals)
+        .sort(([,a], [,b]) => b - a);
     
-    document.getElementById('categorySummaryStats').innerHTML = html;
+    const labels = sortedData.map(([category]) => category);
+    const values = sortedData.map(([, total]) => total);
+    const colors = labels.map((_, index) => `hsla(${(index * 60) % 360}, 70%, 60%, 0.8)`);
     
-    // Create category chart
-    const categories = Array.from(categoryStats.keys()).sort();
-    const totals = categories.map(cat => categoryStats.get(cat).total);
-    
-    destroyChart('categoryChart');
     const ctx = document.getElementById('categoryChart').getContext('2d');
-    charts.categoryChart = new Chart(ctx, {
+    charts.category = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: categories,
+            labels: labels,
             datasets: [{
-                label: `Total ${selectedDataType.charAt(0).toUpperCase() + selectedDataType.slice(1)}`,
-                data: totals,
-                backgroundColor: '#3498db',
-                borderColor: '#2980b9',
+                label: 'Total Sales',
+                data: values,
+                backgroundColor: colors,
+                borderColor: colors.map(color => color.replace('0.8', '1')),
                 borderWidth: 1
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                title: {
-                    display: true,
-                    text: `Category Performance Summary`
-                }
-            },
             scales: {
                 y: {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            return formatEuropean(value, 0);
+                            return formatEuropean(value);
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + formatEuropean(context.parsed.y);
                         }
                     }
                 }
@@ -989,35 +1002,16 @@ function displayCategoryAnalysis() {
     });
 }
 
-// Trend analysis
-function displayTrendAnalysis() {
+// Update trend analysis
+function updateTrendAnalysis() {
     const filteredData = getFilteredData();
-    const selectedDataType = dataTypeFilter.value;
-    
     if (filteredData.length === 0) {
         document.getElementById('trendAnalysis').innerHTML = '<p>No data available for trend analysis.</p>';
         return;
     }
     
-    // Calculate trends by product
-    const trendData = new Map();
-    const allMonths = new Set();
-    
-    filteredData.forEach(d => {
-        const key = d.product;
-        if (!trendData.has(key)) {
-            trendData.set(key, new Map());
-        }
-        
-        const monthKey = `${d.year}-${String(d.month).padStart(2, '0')}`;
-        allMonths.add(monthKey);
-        
-        const value = selectedDataType === 'sales' ? d.sales : d.stocks;
-        trendData.get(key).set(monthKey, value);
-    });
-    
-    const sortedMonths = Array.from(allMonths).sort();
-    const products = Array.from(trendData.keys()).sort();
+    // Calculate comprehensive trend analysis
+    const trendData = calculateTrendAnalysis(filteredData);
     
     let html = '<div class="analytics-section">';
     html += '<h4>Trend Analysis Summary</h4>';
@@ -1025,60 +1019,62 @@ function displayTrendAnalysis() {
     html += '<table class="data-table">';
     html += '<thead><tr>';
     html += '<th>Product</th>';
-    html += '<th>First Period</th>';
-    html += '<th>Last Period</th>';
-    html += '<th>Total Change</th>';
-    html += '<th>Trend</th>';
-    html += '<th>Average Monthly</th>';
+    html += '<th>2023 Total</th>';
+    html += '<th>2024 Total</th>';
+    html += '<th>2025 Total</th>';
+    html += '<th>2023-2024 Growth</th>';
+    html += '<th>2024-2025 Growth</th>';
+    html += '<th>Trend Status</th>';
     html += '</tr></thead>';
     html += '<tbody>';
     
-    products.forEach(product => {
-        const productData = trendData.get(product);
-        const values = sortedMonths.map(month => productData.get(month) || 0).filter(v => v > 0);
+    Object.entries(trendData).forEach(([product, data]) => {
+        const growth2324 = data.total2024 > 0 ? ((data.total2024 - data.total2023) / data.total2023 * 100) : 0;
+        const growth2425 = data.total2025 > 0 ? ((data.total2025 - data.total2024) / data.total2024 * 100) : 0;
         
-        if (values.length > 0) {
-            const firstValue = values[0];
-            const lastValue = values[values.length - 1];
-            const totalChange = lastValue - firstValue;
-            const changePercent = firstValue > 0 ? ((totalChange / firstValue) * 100) : 0;
-            const average = values.reduce((a, b) => a + b, 0) / values.length;
-            
-            let trendClass = 'neutral';
-            let trendText = 'Stable';
-            if (changePercent > 5) {
-                trendClass = 'positive';
-                trendText = 'Growing';
-            } else if (changePercent < -5) {
-                trendClass = 'negative';
-                trendText = 'Declining';
-            }
-            
-            html += '<tr>';
-            html += `<td>${product}</td>`;
-            html += `<td>${formatEuropean(firstValue, 0)}</td>`;
-            html += `<td>${formatEuropean(lastValue, 0)}</td>`;
-            html += `<td class="${changePercent >= 0 ? 'positive' : 'negative'}">`;
-            html += `${formatEuropean(totalChange, 0)} (${changePercent.toFixed(1)}%)`;
-            html += `</td>`;
-            html += `<td class="${trendClass}">${trendText}</td>`;
-            html += `<td>${formatEuropean(average, 0)}</td>`;
-            html += '</tr>';
-        }
+        let status = 'Stable';
+        if (growth2324 > 10 && growth2425 > 10) status = 'Strong Growth';
+        else if (growth2324 > 5 || growth2425 > 5) status = 'Growing';
+        else if (growth2324 < -10 || growth2425 < -10) status = 'Declining';
+        else if (growth2324 < 0 && growth2425 < 0) status = 'Weak';
+        
+        html += '<tr>';
+        html += `<td><strong>${product}</strong></td>`;
+        html += `<td>${formatEuropean(data.total2023)}</td>`;
+        html += `<td>${formatEuropean(data.total2024)}</td>`;
+        html += `<td>${formatEuropean(data.total2025)}</td>`;
+        html += `<td class="${growth2324 >= 0 ? 'positive' : 'negative'}">${growth2324.toFixed(1)}%</td>`;
+        html += `<td class="${growth2425 >= 0 ? 'positive' : 'negative'}">${growth2425.toFixed(1)}%</td>`;
+        html += `<td>${status}</td>`;
+        html += '</tr>';
     });
     
     html += '</tbody></table>';
-    html += '</div></div>';
+    html += '</div>';
+    html += '</div>';
     
     document.getElementById('trendAnalysis').innerHTML = html;
 }
 
-// Chart utility functions
-function destroyChart(chartId) {
-    if (charts[chartId]) {
-        charts[chartId].destroy();
-        delete charts[chartId];
-    }
+// Calculate trend analysis
+function calculateTrendAnalysis(data) {
+    const trendData = {};
+    
+    data.forEach(d => {
+        if (!trendData[d.product]) {
+            trendData[d.product] = {
+                total2023: 0,
+                total2024: 0,
+                total2025: 0
+            };
+        }
+        
+        if (d.year === 2023) trendData[d.product].total2023 += d.value;
+        else if (d.year === 2024) trendData[d.product].total2024 += d.value;
+        else if (d.year === 2025) trendData[d.product].total2025 += d.value;
+    });
+    
+    return trendData;
 }
 
 // Message helpers
@@ -1102,6 +1098,3 @@ function hideMessages() {
 // Initialize
 console.log('Sales & Stocks Analytics loaded - Complete version');
 console.log('European formatting test:', formatEuropean(1234.56, 2));
-
-// Initialize button state
-updateProcessButton();
