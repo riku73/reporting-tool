@@ -240,16 +240,25 @@ function extractCompanyName(filename) {
 // Process EASSC data format
 function processEASSCData(rawData, filename) {
     console.log('Processing EASSC data for:', filename);
-    if (!rawData || rawData.length < 2) return [];
+    console.log('Raw data rows:', rawData.length);
+    console.log('First few rows:', rawData.slice(0, 5));
+    
+    if (!rawData || rawData.length < 2) {
+        console.log('Not enough data in file');
+        return [];
+    }
     
     const companyName = extractCompanyName(filename);
+    console.log('Extracted company name:', companyName);
     const processedData = [];
     
     // Find header row (usually contains months)
     let headerRowIndex = -1;
     for (let i = 0; i < Math.min(10, rawData.length); i++) {
         const row = rawData[i];
-        if (row.some(cell => String(cell).match(/jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec/i))) {
+        const hasMonths = row.some(cell => String(cell).match(/jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec/i));
+        console.log(`Row ${i}:`, row, 'Has months:', hasMonths);
+        if (hasMonths) {
             headerRowIndex = i;
             break;
         }
@@ -320,31 +329,28 @@ function processEASSCData(rawData, filename) {
 
 // Transform EASSC data to salesData format
 function transformEASSCToSalesData(easscData) {
-    const salesDataMap = new Map();
+    console.log('transformEASSCToSalesData called with:', easscData.length, 'records');
+    
+    // Create separate records for each dataType to maintain filtering capability
+    const transformedData = [];
     
     easscData.forEach(record => {
-        const key = `${record.company}-${record.product}-${record.year}-${record.month}-${record.dataType}`;
-        
-        if (!salesDataMap.has(key)) {
-            salesDataMap.set(key, {
-                company: record.company,
-                product: record.product,
-                year: record.year,
-                month: record.month,
-                sales: 0,
-                stocks: 0
-            });
-        }
-        
-        const existing = salesDataMap.get(key);
-        if (record.dataType === 'sales') {
-            existing.sales = record.value;
-        } else if (record.dataType === 'stocks') {
-            existing.stocks = record.value;
-        }
+        transformedData.push({
+            company: record.company,
+            product: record.product,
+            year: record.year,
+            month: record.month,
+            value: record.value,
+            dataType: record.dataType,
+            sales: record.dataType === 'sales' ? record.value : 0,
+            stocks: record.dataType === 'stocks' ? record.value : 0,
+            source: record.source
+        });
     });
     
-    return Array.from(salesDataMap.values());
+    console.log('Transformed data:', transformedData.length, 'records');
+    console.log('Sample transformed data:', transformedData.slice(0, 3));
+    return transformedData;
 }
 
 // Populate filter dropdowns
