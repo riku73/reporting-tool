@@ -263,6 +263,7 @@ function processEASSCData(rawData, filename) {
         
         // Check if this row contains a year (like "2023", "2024", "2025")
         const yearMatch = row.find(cell => String(cell).match(/^(20\d{2})$/));
+        console.log('Checking row', i, ':', row.slice(0, 5), 'Year match:', yearMatch);
         if (yearMatch) {
             const year = parseInt(yearMatch);
             console.log('Found year section:', year, 'at row', i);
@@ -305,7 +306,11 @@ function processEASSCData(rawData, filename) {
                 if (!dataRow || dataRow.length === 0) continue;
                 
                 const productName = String(dataRow[0] || '').trim();
-                if (!productName || productName === '' || productName.toLowerCase().includes('total')) continue;
+                console.log('Processing product row:', dataRow.slice(0, 5), 'Product name:', productName);
+                if (!productName || productName === '' || productName.toLowerCase().includes('total')) {
+                    console.log('Skipping row - invalid product name');
+                    continue;
+                }
                 
                 // Stop if we hit another year section
                 if (dataRow.some(cell => String(cell).match(/^(20\d{2})$/))) {
