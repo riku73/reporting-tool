@@ -252,75 +252,84 @@ function processEASSCData(rawData, filename) {
     console.log('Extracted company name:', companyName);
     const processedData = [];
     
-    // Find header row (usually contains months)
-    let headerRowIndex = -1;
-    for (let i = 0; i < Math.min(10, rawData.length); i++) {
-        const row = rawData[i];
-        const hasMonths = row.some(cell => String(cell).match(/jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec/i));
-        console.log(`Row ${i}:`, row, 'Has months:', hasMonths);
-        if (hasMonths) {
-            headerRowIndex = i;
-            break;
-        }
-    }
-    
-    if (headerRowIndex === -1) {
-        console.warn('No header row found in', filename);
-        return [];
-    }
-    
-    const headers = rawData[headerRowIndex].map(h => String(h).trim().toLowerCase());
-    console.log('Headers found:', headers);
-    
-    // Find month columns
-    const monthColumns = [];
+    // Process EASSC data by finding year sections
     const monthNames = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+    const dataType = filename.toLowerCase().includes('stock') ? 'stocks' : 'sales';
     
-    headers.forEach((header, index) => {
-        monthNames.forEach((month, monthIndex) => {
-            if (header.includes(month)) {
-                // Extract year from header (e.g. "jan23", "feb24")
-                const yearMatch = header.match(/(\d{2,4})/);
-                const year = yearMatch ? (yearMatch[1].length === 2 ? 2000 + parseInt(yearMatch[1]) : parseInt(yearMatch[1])) : 2023;
-                
-                monthColumns.push({
-                    index: index,
-                    month: monthIndex + 1,
-                    year: year,
-                    header: header
-                });
-            }
-        });
-    });
-    
-    console.log('Month columns found:', monthColumns);
-    
-    // Process data rows
-    for (let i = headerRowIndex + 1; i < rawData.length; i++) {
+    // Find all year sections in the data
+    for (let i = 0; i < rawData.length; i++) {
         const row = rawData[i];
         if (!row || row.length === 0) continue;
         
-        const productName = String(row[0] || '').trim();
-        if (!productName || productName === '') continue;
-        
-        // Determine data type from context
-        const dataType = filename.toLowerCase().includes('stock') ? 'stocks' : 'sales';
-        
-        monthColumns.forEach(monthCol => {
-            const value = parseFloat(String(row[monthCol.index] || '0').replace(/,/g, '')) || 0;
+        // Check if this row contains a year (like "2023", "2024", "2025")
+        const yearMatch = row.find(cell => String(cell).match(/^(20\d{2})$/));
+        if (yearMatch) {
+            const year = parseInt(yearMatch);
+            console.log('Found year section:', year, 'at row', i);
             
-            if (value > 0) {
-                processedData.push({
-                    company: companyName,
-                    product: productName,
-                    year: monthCol.year,
-                    month: monthCol.month,
-                    value: value,
-                    dataType: dataType,
-                    source: filename
+            // Find the header row for this year section (next row with months)
+            let headerRowIndex = -1;
+            for (let j = i + 1; j < Math.min(i + 5, rawData.length); j++) {
+                const headerRow = rawData[j];
+                if (headerRow && headerRow.some(cell => String(cell).match(/jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec/i))) {
+                    headerRowIndex = j;
+                    break;
+                }
+            }
+            
+            if (headerRowIndex === -1) continue;
+            
+            const headers = rawData[headerRowIndex].map(h => String(h).trim().toLowerCase());
+            console.log('Headers for year', year, ':', headers);
+            
+            // Find month columns for this year
+            const monthColumns = [];
+            headers.forEach((header, index) => {
+                monthNames.forEach((month, monthIndex) => {
+                    if (header === month || header.includes(month)) {
+                        monthColumns.push({
+                            index: index,
+                            month: monthIndex + 1,
+                            year: year,
+                            header: header
+                        });
+                    }
+                });
+            });
+            
+            console.log('Month columns for year', year, ':', monthColumns);
+            
+            // Process data rows for this year section
+            for (let k = headerRowIndex + 1; k < rawData.length; k++) {
+                const dataRow = rawData[k];
+                if (!dataRow || dataRow.length === 0) continue;
+                
+                const productName = String(dataRow[0] || '').trim();
+                if (!productName || productName === '' || productName.toLowerCase().includes('total')) continue;
+                
+                // Stop if we hit another year section
+                if (dataRow.some(cell => String(cell).match(/^(20\d{2})$/))) {
+                    break;
+                }
+                
+                // Process month values for this product
+                monthColumns.forEach(monthCol => {
+                    const value = parseFloat(String(dataRow[monthCol.index] || '0').replace(/,/g, '')) || 0;
+                    
+                    if (value > 0) {
+                        processedData.push({
+                            company: companyName,
+                            product: productName,
+                            year: monthCol.year,
+                            month: monthCol.month,
+                            value: value,
+                            dataType: dataType,
+                            source: filename
+                        });
+                    }
                 });
             }
-        });
+        }
     }
     
     console.log(`Processed ${processedData.length} records from ${filename}`);
