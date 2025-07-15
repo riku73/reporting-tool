@@ -101,7 +101,7 @@ processBtn.addEventListener('click', async () => {
         populateFilters();
         showDataSection();
         displayDataTable();
-        showSuccess(`Successfully processed ${selectedFiles.length} file(s). European formatting applied.`);
+        showSuccess(`Successfully processed ${selectedFiles.length} file(s) with ${salesData.length} records.`);
         
         // Test European formatting
         console.log('European formatting test:', formatEuropean(1234.56, 2));
@@ -143,6 +143,7 @@ async function processFiles(files) {
     // Process the EASSC data into salesData format
     salesData = transformEASSCToSalesData(easscData);
     console.log('Final salesData:', salesData.length, 'records');
+    console.log('Sample salesData:', salesData.slice(0, 3));
 }
 
 // CSV file reader
@@ -452,6 +453,7 @@ function getFilteredData() {
     return salesData.filter(d => {
         if (selectedCompany !== 'all' && d.company !== selectedCompany) return false;
         if (selectedCategory !== 'all' && d.product !== selectedCategory) return false;
+        if (selectedDataType !== 'all' && d.dataType !== selectedDataType) return false;
         return true;
     });
 }
@@ -461,7 +463,13 @@ function displayDataTable() {
     const filteredData = getFilteredData();
     const selectedDataType = dataTypeFilter.value;
     
+    console.log('displayDataTable called');
+    console.log('Total salesData:', salesData.length);
+    console.log('Filtered data:', filteredData.length);
+    console.log('Selected data type:', selectedDataType);
+    
     if (filteredData.length === 0) {
+        console.log('No filtered data available');
         document.getElementById('dataTableContainer').innerHTML = '<p>No data available for the selected filters.</p>';
         return;
     }
