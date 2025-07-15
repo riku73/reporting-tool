@@ -305,7 +305,7 @@ function processEASSCData(rawData, filename) {
                 const dataRow = rawData[k];
                 if (!dataRow || dataRow.length === 0) continue;
                 
-                const productName = String(dataRow[0] || '').trim();
+                const productName = String(dataRow[1] || '').trim();
                 console.log('Processing product row:', dataRow.slice(0, 5), 'Product name:', productName);
                 if (!productName || productName === '' || productName.toLowerCase().includes('total')) {
                     console.log('Skipping row - invalid product name');
